@@ -3,7 +3,7 @@ module os_menu (
     input  wire       rst_n,
     input  wire [7:0] ui_in,
     output reg  [7:0] uo_out
-);
+    );
     
     reg [2:0] state;
     reg [6:0] op_code;
@@ -14,6 +14,9 @@ module os_menu (
 
     wire enter_pulse = (ui_in[7] == 1'b1) && (enter_prev == 1'b0);
     wire [7:0] decoded_result_LED;
+    wire gcd_done;
+    wire [7:0] gcd_answer;
+    reg start_gcd;
 
     localparam STATE_MENU = 3'd0;
     localparam STATE_LOAD_A = 3'd1;
@@ -40,6 +43,7 @@ module os_menu (
             result <= 8'd0;
             enter_prev <= 1'b0;
             uo_out <= 8'd0;
+            start_gcd <= 1'b0;
         end
         else begin
             enter_prev <= ui_in[7];
@@ -68,8 +72,14 @@ module os_menu (
                 end
                 STATE_CALC : begin
                     uo_out <= CALC_LED; //currently invisible but maybe later visible when waiting for op
-                    result <= (val_a + val_b);  //temporary test op, later here will be the result of the active operation
-                    state <= STATE_DONE;
+
+                    if (gcd_done == 1'b1) begin
+                        result <= gcd_answer;
+                        start_gcd <= 1'b0;
+                        state <= STATE_DONE;
+                    end else begin
+                        start_gcd <= 1'b1;
+                    end
                 end
                 STATE_DONE : begin
                     uo_out <= decoded_result_LED;
@@ -81,4 +91,15 @@ module os_menu (
             endcase
         end
     end
+
+    euclideanSteinFSM gcd_coprocessor (
+        .a_in   (val_a),
+        .b_in   (val_b),
+        .clk    (clk),
+        .rst_n  (rst_n),
+        .start  (start_gcd),
+        .result   (gcd_answer),
+        .done (gcd_done)
+    );
+
 endmodule

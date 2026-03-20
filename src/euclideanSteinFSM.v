@@ -1,34 +1,43 @@
-module euclideanSteinFSM (input [3:0] a_in, input [3:0] b_in, input clk, input reset, input start, output reg [3:0] gcd_out, output reg is_done);
-    reg [3:0] a_reg, b_reg, divisions;
+module euclideanSteinFSM (
+    input [6:0] a_in, 
+    input [6:0] b_in, 
+    input clk, 
+    input rst_n, 
+    input start, 
+    output reg [7:0] result, 
+    output reg done
+    );
+
+    reg [6:0] a_reg, b_reg, divisions;
     reg [1:0] state;
 
     parameter STATE_LOAD = 2'b00;
     parameter STATE_CALC = 2'b01;
     parameter STATE_DONE = 2'b10;
 
-    always @(posedge clk or negedge reset) begin
-        if (!reset) begin
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
             state <= STATE_LOAD;
-            a_reg <= 4'b0000;
-            b_reg <= 4'b0000;
-            gcd_out <= 4'b0000;
-            is_done <= 1'b0;
-            divisions <= 4'b0000;
+            a_reg <= 7'd0;
+            b_reg <= 7'd0;
+            result <= 8'd0;
+            done <= 1'b0;
+            divisions <= 7'd0;
         end
         else begin
             case (state)
                 STATE_LOAD : begin
                     a_reg <= a_in;
                     b_reg <= b_in;
-                    is_done <= 1'b0;
-                    divisions <= 4'b0000;
+                    done <= 1'b0;
+                    divisions <= 7'd0;
                     if (start) begin
                         state <= STATE_CALC;
                     end
                 end
 
                 STATE_CALC : begin
-                    is_done <= 1'b0;
+                    done <= 1'b0;
                     if (b_reg == 0 || a_reg == b_reg) begin
                         state <= STATE_DONE;
                     end
@@ -58,8 +67,8 @@ module euclideanSteinFSM (input [3:0] a_in, input [3:0] b_in, input clk, input r
                 end
 
                 STATE_DONE : begin
-                    gcd_out <= a_reg << divisions;
-                    is_done <= 1'b1;
+                    result <= a_reg << divisions;
+                    done <= 1'b1;
                     if (!start) begin
                         state <= STATE_LOAD;
                     end
