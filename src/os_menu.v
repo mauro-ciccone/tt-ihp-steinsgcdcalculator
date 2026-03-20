@@ -9,16 +9,22 @@ module os_menu (
     //    reg [6:0] op_code;
     reg [6:0] val_a;
     reg [6:0] val_b;
-    /* verilator lint_off UNUSEDSIGNAL */
     reg [7:0] result;
-    /* verilator lint_on UNUSEDSIGNAL */
     reg enter_prev;
+    reg  timer_enable;
+    reg  [1:0] display_state;
+    reg start_gcd;
 
     wire enter_pulse = (ui_in[7] == 1'b1) && (enter_prev == 1'b0);
     wire [7:0] decoded_result_LED;
     wire gcd_done;
     wire [7:0] gcd_answer;
-    reg start_gcd;
+    wire [11:0] bcd_result;
+    wire timer_tick;
+    wire [3:0] current_digit = (display_state == 2'd0) ? bcd_result[11:8] :
+                               (display_state == 2'd1) ? bcd_result[7:4]  : 
+                                                         bcd_result[3:0];
+    
 
     localparam STATE_MENU = 3'd0;
     localparam STATE_LOAD_A = 3'd1;
@@ -31,9 +37,31 @@ module os_menu (
     localparam LOAD_B_LED = 8'b01111111;
     localparam CALC_LED = 8'b01000000;
 
-    decoderLED temporary_display (
-        .a (result[3:0]),
+    bin_to_bcd math_translator (
+        .bin (result),
+        .bcd (bcd_result)
+    );
+
+    delay_timer ui_timer (
+        .clk    (clk),
+        .rst_n  (rst_n),
+        .enable (timer_enable),
+        .tick   (timer_tick)
+    );
+
+    decoderLED final_display (
+        .a (current_digit),
         .y (decoded_result_LED)
+    );
+
+    euclideanSteinFSM gcd_coprocessor (
+        .a_in   (val_a),
+        .b_in   (val_b),
+        .clk    (clk),
+        .rst_n  (rst_n),
+        .start  (start_gcd),
+        .result   (gcd_answer),
+        .done (gcd_done)
     );
 
     always @(posedge clk or negedge rst_n) begin
@@ -46,6 +74,8 @@ module os_menu (
             enter_prev <= 1'b0;
             uo_out <= 8'd0;
             start_gcd <= 1'b0;
+            timer_enable <= 1'b0;
+            display_state <= 2'd0;
         end
         else begin
             enter_prev <= ui_in[7];
@@ -85,23 +115,25 @@ module os_menu (
                 end
                 STATE_DONE : begin
                     uo_out <= decoded_result_LED;
+                    timer_enable <= 1'b1;
+
                     if (enter_pulse == 1) begin
+                        timer_enable <= 1'b0;
+                        display_state <= 2'd0;
                         state <= STATE_MENU;
+                    end
+                    else if (timer_tick == 1'b1) begin
+                        if (display_state == 2'd2) begin
+                            display_state <= 2'd0;
+                        end
+                        else begin
+                            display_state <= display_state + 1'b1;
+                        end
                     end
                 end
                 default: state <= 3'd0;
             endcase
         end
     end
-
-    euclideanSteinFSM gcd_coprocessor (
-        .a_in   (val_a),
-        .b_in   (val_b),
-        .clk    (clk),
-        .rst_n  (rst_n),
-        .start  (start_gcd),
-        .result   (gcd_answer),
-        .done (gcd_done)
-    );
 
 endmodule
