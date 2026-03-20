@@ -7,7 +7,7 @@ It reads two 4-bit numbers from the 8 dedicated input switches. When the start b
 1. Set the bottom 4 input switches (`ui_in[3:0]`) to your first number (A).
 2. Set the top 4 input switches (`ui_in[7:4]`) to your second number (B).
 3. Press the Start button (`uio_in[0]`).
-4. Observe the 7-segment display (`uo_out`). It will show a dash (`-`) while processing, and then instantly output the final GCD result.
+4. The 7-segment display (`uo_out`) will show a dash (`-`) while processing, and then output the GCD result.
 
 ## External hardware
 No external hardware is required. The design uses the standard Tiny Tapeout demo board's built-in dip switches, push buttons, and 7-segment display.

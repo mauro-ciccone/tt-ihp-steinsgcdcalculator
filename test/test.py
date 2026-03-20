@@ -4,7 +4,12 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, RisingEdge
+import math
 
+SEGMENTS = {
+    0: 0x3F, 1: 0x06, 2: 0x5B, 3: 0x4F, 4: 0x66, 5: 0x6D, 6: 0x7D, 7: 0x07,
+    8: 0x7F, 9: 0x6F, 10: 0x77, 11: 0x7C, 12: 0x39, 13: 0x5E, 14: 0x79, 15: 0x71
+}
 
 @cocotb.test()
 async def test_project(dut):
@@ -24,28 +29,42 @@ async def test_project(dut):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 2)
 
+    
+
     dut._log.info("Test project behavior")
 
-    # Set the input values you want to test
-    dut.ui_in.value = 0x8C
-    dut.uio_in.value = 1
+    test_cases = [
+        (12, 8),
+        (15, 5),
+        (8, 9),
+        (7, 12),
+        (13, 13),
+        (9, 6),
+        (1, 4)
+    ]
 
-    # Wait for one clock cycle to see the output values
-    await ClockCycles(dut.clk, 1)
+    for a in range (16):
+        for b in range (16):
+            test_cases.append(a, b)
 
-    dut.uio_in.value = 0
+    for a, b in test_cases:
+        expected = math.gcd(a, b)
+        cocotb.log.info(f"testing gcd {a}, {b}")
 
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    for i in range(50):
-        await RisingEdge(dut.clk)
-        if dut.uo_out.value != 0x40:
-            break
-    
-    cocotb.log.info(f"Final 7-Segment Output: {hex(dut.uo_out.value)}")
-    assert dut.uo_out.value == 0x66, f"TEST FAILED: Expected 0x66 (4), got {hex(dut.uo_out.value)}"
-    
-    cocotb.log.info("TEST PASSED! The Stein's Algorithm Chip Works!")
-    
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
+        dut.ui_in.value = (b << 4) | a
+        
+        dut.uio_in.value = 1
+        await ClockCycles(dut.clk, 1)
+        dut.uio_in.value = 0
+
+        for i in range (100) :
+            await RisingEdge(dut.clk)
+            if dut.uo_out.value != 0x40:    #wait till dash goes away to read result
+                break
+        expected_segments = SEGMENTS.get(expected, 0x00)
+        actual_segments = int(dut.uo_out.value)
+
+        assert actual_segments == expected_segments, \
+            f"Failed GCD: {a}, {b} expected = {hex(expected)} got: {hex(dut.uo_out.value)}" #test result and log if failed
+        
+        await ClockCycles(dut.clk, 5)
