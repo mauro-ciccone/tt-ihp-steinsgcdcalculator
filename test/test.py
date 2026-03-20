@@ -45,7 +45,7 @@ async def test_project(dut):
 
     for a in range (16):
         for b in range (16):
-            test_cases.append(a, b)
+            test_cases.append((a, b))
 
     for a, b in test_cases:
         expected = math.gcd(a, b)
