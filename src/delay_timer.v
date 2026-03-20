@@ -2,7 +2,7 @@ module delay_timer (
     input wire clk,
     input wire rst_n,
     input wire enable,
-    output reg tick,
+    output reg tick
     );
 
     reg [25:0] counter;
