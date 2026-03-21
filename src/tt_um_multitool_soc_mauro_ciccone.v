@@ -5,7 +5,7 @@
 
 `default_nettype none
 
-module tt_um_gcd_coprocessor_mauro_ciccone (
+module tt_um_multitool_soc_mauro_ciccone (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path

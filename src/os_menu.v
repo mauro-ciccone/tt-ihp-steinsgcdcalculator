@@ -6,7 +6,7 @@ module os_menu (
     );
     
     reg [2:0] state;
-    //    reg [6:0] op_code;
+    reg [6:0] op_code;
     reg [6:0] val_a;
     reg [6:0] val_b;
     reg [7:0] result;
@@ -14,6 +14,7 @@ module os_menu (
     reg  timer_enable;
     reg  [1:0] display_state;
     reg start_gcd;
+    reg start_isqrt;
 
     wire enter_pulse = (ui_in[7] == 1'b1) && (enter_prev == 1'b0);
     wire [7:0] decoded_result_LED;
@@ -24,6 +25,8 @@ module os_menu (
     wire [3:0] current_digit = (display_state == 2'd0) ? bcd_result[11:8] :
                                (display_state == 2'd1) ? bcd_result[7:4]  : 
                                                          bcd_result[3:0];
+    wire isqrt_done;
+    wire [7:0] isqrt_answer;
     
 
     localparam STATE_MENU = 3'd0;
@@ -49,12 +52,12 @@ module os_menu (
         .tick   (timer_tick)
     );
 
-    decoderLED final_display (
+    led_decoder final_display (
         .a (current_digit),
         .y (decoded_result_LED)
     );
 
-    euclideanSteinFSM gcd_coprocessor (
+    op_gcd gcd_coprocessor (
         .a_in   (val_a),
         .b_in   (val_b),
         .clk    (clk),
@@ -64,10 +67,20 @@ module os_menu (
         .done (gcd_done)
     );
 
+    op_isqrt sqrt_coprocessor (
+    .a_in   (val_a),
+    .b_in   (val_b),
+    .clk    (clk),
+    .rst_n  (rst_n),
+    .start  (start_isqrt),
+    .result (isqrt_answer),
+    .done   (isqrt_done)
+    );
+
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= 3'b000;
-            //    op_code <= 7'd0;
+            op_code <= 7'd0;
             val_a <= 7'd0;
             val_b <= 7'd0;
             result <= 8'd0;
@@ -76,6 +89,7 @@ module os_menu (
             start_gcd <= 1'b0;
             timer_enable <= 1'b0;
             display_state <= 2'd0;
+            start_isqrt <= 1'b0;
         end
         else begin
             enter_prev <= ui_in[7];
@@ -84,7 +98,7 @@ module os_menu (
                 STATE_MENU : begin
                     uo_out <= MENU_LED;
                     if (enter_pulse == 1) begin
-                        //    op_code <= ui_in[6:0];
+                        op_code <= ui_in[6:0];
                         state <= STATE_LOAD_A;
                     end
                 end
@@ -105,16 +119,39 @@ module os_menu (
                 STATE_CALC : begin
                     uo_out <= CALC_LED; //currently invisible but maybe later visible when waiting for op
 
-                    if (gcd_done == 1'b1) begin
-                        result <= gcd_answer;
-                        start_gcd <= 1'b0;
-                        state <= STATE_DONE;
-                    end else begin
-                        start_gcd <= 1'b1;
-                    end
+                    case (op_code)
+                        7'd0 : begin
+                            if (gcd_done == 1'b1) begin
+                                result <= gcd_answer;
+                                start_gcd <= 1'b0;
+                                state <= STATE_DONE;
+                            end
+                            else begin
+                                start_gcd <= 1'b1;
+                            end
+                        end
+                        7'd1 : begin
+                            if (isqrt_done == 1'b1) begin
+                                result <= isqrt_answer;
+                                start_isqrt <= 1'b0;
+                                state <= STATE_DONE;
+                            end
+                            else begin
+                                start_isqrt <= 1'b1;
+                            end
+                        end
+                        //add here the other operations
+                        default: begin
+                            state <= STATE_MENU;
+                        end
+                    endcase
                 end
                 STATE_DONE : begin
-                    uo_out <= decoded_result_LED;
+                    if (display_state == 2'd0) begin
+                        uo_out <= {1'b1, decoded_result_LED[6:0]};
+                    end else begin
+                        uo_out <= {1'b0, decoded_result_LED[6:0]}; 
+                    end
                     timer_enable <= 1'b1;
 
                     if (enter_pulse == 1) begin

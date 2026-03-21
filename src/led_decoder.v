@@ -1,4 +1,4 @@
-module decoderLED (
+module led_decoder (
     input [3:0] a, output reg [7:0] y
 );
 

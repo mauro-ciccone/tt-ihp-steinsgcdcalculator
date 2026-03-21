@@ -1,4 +1,4 @@
-module euclideanSteinFSM (
+module op_gcd (
     input [6:0] a_in, 
     input [6:0] b_in, 
     input clk, 
@@ -11,9 +11,9 @@ module euclideanSteinFSM (
     reg [6:0] a_reg, b_reg, divisions;
     reg [1:0] state;
 
-    parameter STATE_LOAD = 2'b00;
-    parameter STATE_CALC = 2'b01;
-    parameter STATE_DONE = 2'b10;
+    localparam STATE_LOAD = 2'b00;
+    localparam STATE_CALC = 2'b01;
+    localparam STATE_DONE = 2'b10;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
