@@ -36,7 +36,7 @@ module os_menu (
     wire [7:0] isqrt_answer;
     wire lfsr_done;
     wire [7:0] lfsr_answer;
-    wire [19:0] debounce_limit = (test_mode == 1'b1) ? 20'd5 : 20'd1000000;
+    wire [19:0] debounce_limit = (test_mode == 1'b1) ? 20'd100 : 20'd1000000;
     
 
     localparam STATE_MENU = 3'd0;
@@ -192,7 +192,7 @@ module os_menu (
                                 start_lfsr <= 1'b1;
                             end
                         end
-                        //add here the other operations
+                        //possible to add here up to 128 apps total
                         default: begin
                             state <= STATE_MENU;
                         end

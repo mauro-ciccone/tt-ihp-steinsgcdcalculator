@@ -7,7 +7,7 @@ module delay_timer (
     );
 
     reg [25:0] counter;
-    wire [25:0] current_max = (test_mode == 1'b1) ? 26'd5 : 26'd49999999;
+    wire [25:0] current_max = (test_mode == 1'b1) ? 26'd100 : 26'd49999999;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
